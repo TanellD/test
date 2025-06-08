@@ -348,58 +348,58 @@ def health_check():
 @app.route('/generate', methods=['POST'])
 def generate_ootd():
 """Generate with keep-alive headers"""
-try:
-    data = request.get_json()
-    
-    # Validate inputs
-    model_image_b64 = data.get('model_image')
-    cloth_image_b64 = data.get('cloth_image')
-    
-    if not model_image_b64 or not cloth_image_b64:
-        return jsonify({"success": False, "error": "Images required"}), 400
-    
-    # Send immediate response to prevent 503
-    print("🔄 Starting generation...")
-    
-    # Decode images
-    model_image = ootd_server._decode_base64_image(model_image_b64)
-    cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
-    
-    # Process OOTD
-    result = ootd_server.process_ootd(
-        model_image=model_image,
-        cloth_image=cloth_image,
-        model_type=data.get('model_type', 'dc'),
-        category=data.get('category', 0),
-        scale=data.get('scale', 2.0),
-        steps=data.get('steps', 20),
-        samples=1,
-        seed=data.get('seed', 42)
-    )
-    
-    if result["success"]:
-        first_image = result["images"][0]
-        response = jsonify({
-            "success": True,
-            "image_base64": first_image["image_base64"],
-            "model_type": result["model_type"]
-        })
-    else:
-        response = jsonify(result)
-    
-    # Add headers to prevent timeout
-    response.headers['Connection'] = 'keep-alive'
-    response.headers['Keep-Alive'] = 'timeout=600, max=1000'
-    response.headers['Cache-Control'] = 'no-cache'
-    
-    return response
-    
-except Exception as e:
-    print(f"❌ Error: {str(e)}")
-    return jsonify({
-        "success": False,
-        "error": str(e)
-    }), 500
+    try:
+        data = request.get_json()
+        
+        # Validate inputs
+        model_image_b64 = data.get('model_image')
+        cloth_image_b64 = data.get('cloth_image')
+        
+        if not model_image_b64 or not cloth_image_b64:
+            return jsonify({"success": False, "error": "Images required"}), 400
+        
+        # Send immediate response to prevent 503
+        print("🔄 Starting generation...")
+        
+        # Decode images
+        model_image = ootd_server._decode_base64_image(model_image_b64)
+        cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
+        
+        # Process OOTD
+        result = ootd_server.process_ootd(
+            model_image=model_image,
+            cloth_image=cloth_image,
+            model_type=data.get('model_type', 'dc'),
+            category=data.get('category', 0),
+            scale=data.get('scale', 2.0),
+            steps=data.get('steps', 20),
+            samples=1,
+            seed=data.get('seed', 42)
+        )
+        
+        if result["success"]:
+            first_image = result["images"][0]
+            response = jsonify({
+                "success": True,
+                "image_base64": first_image["image_base64"],
+                "model_type": result["model_type"]
+            })
+        else:
+            response = jsonify(result)
+        
+        # Add headers to prevent timeout
+        response.headers['Connection'] = 'keep-alive'
+        response.headers['Keep-Alive'] = 'timeout=600, max=1000'
+        response.headers['Cache-Control'] = 'no-cache'
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @app.route('/generate_from_paths', methods=['POST'])
 def generate_from_paths():

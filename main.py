@@ -285,68 +285,68 @@ def health_check():
         "gpu_id": ootd_server.gpu_id
     })
 
-# @app.route('/generate', methods=['POST'])
-# def generate_ootd():
-#     """Main OOTD generation endpoint - returns first image only"""
-#     try:
-#         data = request.get_json()
+@app.route('/generate', methods=['POST'])
+def generate_ootd():
+    """Main OOTD generation endpoint - returns first image only"""
+    try:
+        data = request.get_json()
         
-#         # Extract parameters
-#         model_image_b64 = data.get('model_image')  # base64 encoded
-#         cloth_image_b64 = data.get('cloth_image')  # base64 encoded
-#         model_type = data.get('model_type', 'dc')
-#         category = data.get('category', 0)
-#         scale = data.get('scale', 2.0)
-#         steps = data.get('steps', 20)
-#         samples = data.get('samples', 1)
-#         seed = data.get('seed', 42)
+        # Extract parameters
+        model_image_b64 = data.get('model_image')  # base64 encoded
+        cloth_image_b64 = data.get('cloth_image')  # base64 encoded
+        model_type = data.get('model_type', 'dc')
+        category = data.get('category', 0)
+        scale = data.get('scale', 2.0)
+        steps = data.get('steps', 20)
+        samples = data.get('samples', 1)
+        seed = data.get('seed', 42)
         
-#         # Validate required inputs
-#         if not model_image_b64 or not cloth_image_b64:
-#             return jsonify({
-#                 "success": False,
-#                 "error": "model_image and cloth_image are required"
-#             }), 400
+        # Validate required inputs
+        if not model_image_b64 or not cloth_image_b64:
+            return jsonify({
+                "success": False,
+                "error": "model_image and cloth_image are required"
+            }), 400
         
-#         # Decode images
-#         model_image = ootd_server._decode_base64_image(model_image_b64)
-#         cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
+        # Decode images
+        model_image = ootd_server._decode_base64_image(model_image_b64)
+        cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
         
-#         # Process OOTD - force samples=1 to get only first image
-#         result = ootd_server.process_ootd(
-#             model_image=model_image,
-#             cloth_image=cloth_image,
-#             model_type=model_type,
-#             category=category,
-#             scale=scale,
-#             steps=steps,
-#             samples=1,  # Force only 1 sample
-#             seed=seed
-#         )
+        # Process OOTD - force samples=1 to get only first image
+        result = ootd_server.process_ootd(
+            model_image=model_image,
+            cloth_image=cloth_image,
+            model_type=model_type,
+            category=category,
+            scale=scale,
+            steps=steps,
+            samples=1,  # Force only 1 sample
+            seed=seed
+        )
         
-#         # Return only the first image info
-#         if result["success"] and result["images"]:
-#             first_image = result["images"][0]
-#             return jsonify({
-#                 "success": True,
-#                 "model_type": result["model_type"],
-#                 "category": result["category"],
-#                 "image": {
-#                     "filename": first_image["filename"],
-#                     "filepath": first_image["filepath"],
-#                     "image_base64": first_image["image_base64"]
-#                 },
-#                 "mask_path": result["mask_path"]
-#             })
-#         else:
-#             return jsonify(result)
+        # Return only the first image info
+        if result["success"] and result["images"]:
+            first_image = result["images"][0]
+            return jsonify({
+                "success": True,
+                "model_type": result["model_type"],
+                "category": result["category"],
+                "image": {
+                    "filename": first_image["filename"],
+                    "filepath": first_image["filepath"],
+                    "image_base64": first_image["image_base64"]
+                },
+                "mask_path": result["mask_path"]
+            })
+        else:
+            return jsonify(result)
         
-#     except Exception as e:
-#         return jsonify({
-#             "success": False,
-#             "error": str(e),
-#             "traceback": traceback.format_exc()
-#         }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 
 # @app.route('/generate_sync', methods=['POST'])
@@ -394,295 +394,295 @@ def health_check():
 #         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route('/generate_sync', methods=['POST'])
-def generate_sync():
-    """Synchronous generation with keep-alive streaming"""
-    try:
-        # Get request data outside the generator
-        data = request.get_json()
+# @app.route('/generate_sync', methods=['POST'])
+# def generate_sync():
+#     """Synchronous generation with keep-alive streaming"""
+#     try:
+#         # Get request data outside the generator
+#         data = request.get_json()
         
-        # Validate inputs
-        if not data.get('model_image') or not data.get('cloth_image'):
-            return jsonify({"success": False, "error": "Images required"}), 400
+#         # Validate inputs
+#         if not data.get('model_image') or not data.get('cloth_image'):
+#             return jsonify({"success": False, "error": "Images required"}), 400
         
-        def generate_with_keepalive():
-            """Generator function for streaming response"""
-            try:
-                # Send initial status
-                yield "data: " + json.dumps({"status": "starting", "progress": 0}) + "\n\n"
-                time.sleep(0.1)  # Small delay to ensure client receives
+#         def generate_with_keepalive():
+#             """Generator function for streaming response"""
+#             try:
+#                 # Send initial status
+#                 yield "data: " + json.dumps({"status": "starting", "progress": 0}) + "\n\n"
+#                 time.sleep(0.1)  # Small delay to ensure client receives
                 
-                # Extract parameters
-                model_image_b64 = data.get('model_image')  # base64 encoded
-                cloth_image_b64 = data.get('cloth_image')  # base64 encoded
-                model_type = data.get('model_type', 'dc')
-                category = data.get('category', 0)
-                scale = data.get('scale', 2.0)
-                steps = data.get('steps', 20)
-                samples = data.get('samples', 1)
-                seed = data.get('seed', 42)
+#                 # Extract parameters
+#                 model_image_b64 = data.get('model_image')  # base64 encoded
+#                 cloth_image_b64 = data.get('cloth_image')  # base64 encoded
+#                 model_type = data.get('model_type', 'dc')
+#                 category = data.get('category', 0)
+#                 scale = data.get('scale', 2.0)
+#                 steps = data.get('steps', 20)
+#                 samples = data.get('samples', 1)
+#                 seed = data.get('seed', 42)
                 
-                # Decode images
-                yield "data: " + json.dumps({"status": "decoding", "progress": 10}) + "\n\n"
-                model_image = ootd_server._decode_base64_image(model_image_b64)
-                cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
+#                 # Decode images
+#                 yield "data: " + json.dumps({"status": "decoding", "progress": 10}) + "\n\n"
+#                 model_image = ootd_server._decode_base64_image(model_image_b64)
+#                 cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
                 
-                # Send processing status
-                yield "data: " + json.dumps({"status": "processing", "progress": 20}) + "\n\n"
+#                 # Send processing status
+#                 yield "data: " + json.dumps({"status": "processing", "progress": 20}) + "\n\n"
                 
-                # Process OOTD with full parameters - force samples=1 to get only first image
-                result = ootd_server.process_ootd(
-                    model_image=model_image,
-                    cloth_image=cloth_image,
-                    model_type=model_type,
-                    category=category,
-                    scale=scale,
-                    steps=steps,
-                    samples=1,  # Force only 1 sample
-                    seed=seed
-                )
+#                 # Process OOTD with full parameters - force samples=1 to get only first image
+#                 result = ootd_server.process_ootd(
+#                     model_image=model_image,
+#                     cloth_image=cloth_image,
+#                     model_type=model_type,
+#                     category=category,
+#                     scale=scale,
+#                     steps=steps,
+#                     samples=1,  # Force only 1 sample
+#                     seed=seed
+#                 )
                 
-                # Send final result
-                if result["success"] and result["images"]:
-                    first_image = result["images"][0]
-                    final_data = {
-                        "status": "completed",
-                        "success": True,
-                        "progress": 100,
-                        "model_type": result["model_type"],
-                        "category": result["category"],
-                        "image": {
-                            "filename": first_image["filename"],
-                            "filepath": first_image["filepath"],
-                            "image_base64": first_image["image_base64"]
-                        },
-                        "mask_path": result["mask_path"]
-                    }
-                else:
-                    final_data = {
-                        "status": "failed",
-                        "success": False,
-                        "error": result.get("error", "Unknown error")
-                    }
+#                 # Send final result
+#                 if result["success"] and result["images"]:
+#                     first_image = result["images"][0]
+#                     final_data = {
+#                         "status": "completed",
+#                         "success": True,
+#                         "progress": 100,
+#                         "model_type": result["model_type"],
+#                         "category": result["category"],
+#                         "image": {
+#                             "filename": first_image["filename"],
+#                             "filepath": first_image["filepath"],
+#                             "image_base64": first_image["image_base64"]
+#                         },
+#                         "mask_path": result["mask_path"]
+#                     }
+#                 else:
+#                     final_data = {
+#                         "status": "failed",
+#                         "success": False,
+#                         "error": result.get("error", "Unknown error")
+#                     }
                 
-                yield "data: " + json.dumps(final_data) + "\n\n"
+#                 yield "data: " + json.dumps(final_data) + "\n\n"
                 
-            except Exception as e:
-                # Send error in streaming format
-                error_data = {
-                    "status": "failed",
-                    "success": False,
-                    "error": str(e)
-                }
-                yield "data: " + json.dumps(error_data) + "\n\n"
+#             except Exception as e:
+#                 # Send error in streaming format
+#                 error_data = {
+#                     "status": "failed",
+#                     "success": False,
+#                     "error": str(e)
+#                 }
+#                 yield "data: " + json.dumps(error_data) + "\n\n"
         
-        # Return streaming response
-        return Response(
-            generate_with_keepalive(),
-            mimetype='text/plain',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'X-Accel-Buffering': 'no',  # Disable nginx buffering
-                'Transfer-Encoding': 'chunked'
-            }
-        )
+#         # Return streaming response
+#         return Response(
+#             generate_with_keepalive(),
+#             mimetype='text/plain',
+#             headers={
+#                 'Cache-Control': 'no-cache',
+#                 'Connection': 'keep-alive',
+#                 'Access-Control-Allow-Origin': '*',
+#                 'X-Accel-Buffering': 'no',  # Disable nginx buffering
+#                 'Transfer-Encoding': 'chunked'
+#             }
+#         )
         
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+#     except Exception as e:
+#         return jsonify({
+#             "success": False,
+#             "error": str(e)
+#         }), 500
 
-@app.route('/generate_sync_simple', methods=['POST'])
-def generate_sync_simple():
-    """Simple synchronous endpoint with just keep-alive headers"""
-    try:
-        data = request.get_json()
+# @app.route('/generate_sync_simple', methods=['POST'])
+# def generate_sync_simple():
+#     """Simple synchronous endpoint with just keep-alive headers"""
+#     try:
+#         data = request.get_json()
         
-        # Extract parameters
-        model_image_b64 = data.get('model_image')  # base64 encoded
-        cloth_image_b64 = data.get('cloth_image')  # base64 encoded
-        model_type = data.get('model_type', 'dc')
-        category = data.get('category', 0)
-        scale = data.get('scale', 2.0)
-        steps = data.get('steps', 20)
-        samples = data.get('samples', 1)
-        seed = data.get('seed', 42)
+#         # Extract parameters
+#         model_image_b64 = data.get('model_image')  # base64 encoded
+#         cloth_image_b64 = data.get('cloth_image')  # base64 encoded
+#         model_type = data.get('model_type', 'dc')
+#         category = data.get('category', 0)
+#         scale = data.get('scale', 2.0)
+#         steps = data.get('steps', 20)
+#         samples = data.get('samples', 1)
+#         seed = data.get('seed', 42)
         
-        # Validate required inputs
-        if not model_image_b64 or not cloth_image_b64:
-            return jsonify({
-                "success": False,
-                "error": "model_image and cloth_image are required"
-            }), 400
+#         # Validate required inputs
+#         if not model_image_b64 or not cloth_image_b64:
+#             return jsonify({
+#                 "success": False,
+#                 "error": "model_image and cloth_image are required"
+#             }), 400
         
-        print("🔄 Starting synchronous generation...")
-        print(f"   Model type: {model_type}")
-        print(f"   Category: {category}")
-        print(f"   Scale: {scale}")
-        print(f"   Steps: {steps}")
-        print(f"   Seed: {seed}")
-        start_time = time.time()
+#         print("🔄 Starting synchronous generation...")
+#         print(f"   Model type: {model_type}")
+#         print(f"   Category: {category}")
+#         print(f"   Scale: {scale}")
+#         print(f"   Steps: {steps}")
+#         print(f"   Seed: {seed}")
+#         start_time = time.time()
         
-        # Decode images
-        model_image = ootd_server._decode_base64_image(model_image_b64)
-        cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
+#         # Decode images
+#         model_image = ootd_server._decode_base64_image(model_image_b64)
+#         cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
         
-        # Process OOTD - force samples=1 to get only first image
-        result = ootd_server.process_ootd(
-            model_image=model_image,
-            cloth_image=cloth_image,
-            model_type=model_type,
-            category=category,
-            scale=scale,
-            steps=steps,
-            samples=1,  # Force only 1 sample
-            seed=seed
-        )
+#         # Process OOTD - force samples=1 to get only first image
+#         result = ootd_server.process_ootd(
+#             model_image=model_image,
+#             cloth_image=cloth_image,
+#             model_type=model_type,
+#             category=category,
+#             scale=scale,
+#             steps=steps,
+#             samples=1,  # Force only 1 sample
+#             seed=seed
+#         )
         
-        end_time = time.time()
-        print(f"⏱️ Generation completed in {end_time - start_time:.2f} seconds")
+#         end_time = time.time()
+#         print(f"⏱️ Generation completed in {end_time - start_time:.2f} seconds")
         
-        # Return only the first image info
-        if result["success"] and result["images"]:
-            first_image = result["images"][0]
-            response_data = {
-                "success": True,
-                "model_type": result["model_type"],
-                "category": result["category"],
-                "image": {
-                    "filename": first_image["filename"],
-                    "filepath": first_image["filepath"],
-                    "image_base64": first_image["image_base64"]
-                },
-                "mask_path": result["mask_path"],
-                "processing_time": f"{end_time - start_time:.2f}s"
-            }
-            response = jsonify(response_data)
-        else:
-            response = jsonify(result)
+#         # Return only the first image info
+#         if result["success"] and result["images"]:
+#             first_image = result["images"][0]
+#             response_data = {
+#                 "success": True,
+#                 "model_type": result["model_type"],
+#                 "category": result["category"],
+#                 "image": {
+#                     "filename": first_image["filename"],
+#                     "filepath": first_image["filepath"],
+#                     "image_base64": first_image["image_base64"]
+#                 },
+#                 "mask_path": result["mask_path"],
+#                 "processing_time": f"{end_time - start_time:.2f}s"
+#             }
+#             response = jsonify(response_data)
+#         else:
+#             response = jsonify(result)
         
-        # Add aggressive keep-alive headers for Java clients
-        response.headers['Connection'] = 'keep-alive'
-        response.headers['Keep-Alive'] = 'timeout=900, max=1000'  # 15 minute timeout
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['Server'] = 'OOTD-Server/1.0'
+#         # Add aggressive keep-alive headers for Java clients
+#         response.headers['Connection'] = 'keep-alive'
+#         response.headers['Keep-Alive'] = 'timeout=900, max=1000'  # 15 minute timeout
+#         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+#         response.headers['Pragma'] = 'no-cache'
+#         response.headers['Expires'] = '0'
+#         response.headers['Access-Control-Allow-Origin'] = '*'
+#         response.headers['X-Content-Type-Options'] = 'nosniff'
+#         response.headers['X-Frame-Options'] = 'DENY'
+#         response.headers['Server'] = 'OOTD-Server/1.0'
         
-        return response
+#         return response
         
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        error_response = jsonify({
-            "success": False,
-            "error": str(e)
-        })
-        error_response.headers['Access-Control-Allow-Origin'] = '*'
-        return error_response, 500
+#     except Exception as e:
+#         print(f"❌ Error: {str(e)}")
+#         error_response = jsonify({
+#             "success": False,
+#             "error": str(e)
+#         })
+#         error_response.headers['Access-Control-Allow-Origin'] = '*'
+#         return error_response, 500
 
-@app.route('/generate_chunked', methods=['POST'])
-def generate_chunked():
-    """Chunked transfer encoding to prevent timeouts"""
-    try:
-        data = request.get_json()
+# @app.route('/generate_chunked', methods=['POST'])
+# def generate_chunked():
+#     """Chunked transfer encoding to prevent timeouts"""
+#     try:
+#         data = request.get_json()
         
-        if not data.get('model_image') or not data.get('cloth_image'):
-            return jsonify({"success": False, "error": "Images required"}), 400
+#         if not data.get('model_image') or not data.get('cloth_image'):
+#             return jsonify({"success": False, "error": "Images required"}), 400
         
-        def chunked_response():
-            """Generate chunked response"""
-            # Send initial chunk
-            chunk1 = json.dumps({"status": "received"}) + "\n"
-            yield f"{len(chunk1):x}\r\n{chunk1}\r\n"
+#         def chunked_response():
+#             """Generate chunked response"""
+#             # Send initial chunk
+#             chunk1 = json.dumps({"status": "received"}) + "\n"
+#             yield f"{len(chunk1):x}\r\n{chunk1}\r\n"
             
-            try:
-                # Decode images
-                model_image = ootd_server._decode_base64_image(model_image_b64)
-                cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
+#             try:
+#                 # Decode images
+#                 model_image = ootd_server._decode_base64_image(model_image_b64)
+#                 cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
                 
-                # Send processing chunk
-                chunk2 = json.dumps({"status": "processing"}) + "\n"
-                yield f"{len(chunk2):x}\r\n{chunk2}\r\n"
+#                 # Send processing chunk
+#                 chunk2 = json.dumps({"status": "processing"}) + "\n"
+#                 yield f"{len(chunk2):x}\r\n{chunk2}\r\n"
                 
-                # Process OOTD - force samples=1 to get only first image
-                result = ootd_server.process_ootd(
-                    model_image=model_image,
-                    cloth_image=cloth_image,
-                    model_type=model_type,
-                    category=category,
-                    scale=scale,
-                    steps=steps,
-                    samples=1,  # Force only 1 sample
-                    seed=seed
-                )
+#                 # Process OOTD - force samples=1 to get only first image
+#                 result = ootd_server.process_ootd(
+#                     model_image=model_image,
+#                     cloth_image=cloth_image,
+#                     model_type=model_type,
+#                     category=category,
+#                     scale=scale,
+#                     steps=steps,
+#                     samples=1,  # Force only 1 sample
+#                     seed=seed
+#                 )
                 
-                # Send final result chunk
-                if result["success"] and result["images"]:
-                    first_image = result["images"][0]
-                    final_data = {
-                        "status": "completed",
-                        "success": True,
-                        "model_type": result["model_type"],
-                        "category": result["category"],
-                        "image": {
-                            "filename": first_image["filename"],
-                            "filepath": first_image["filepath"],
-                            "image_base64": first_image["image_base64"]
-                        },
-                        "mask_path": result["mask_path"]
-                    }
-                else:
-                    final_data = result
+#                 # Send final result chunk
+#                 if result["success"] and result["images"]:
+#                     first_image = result["images"][0]
+#                     final_data = {
+#                         "status": "completed",
+#                         "success": True,
+#                         "model_type": result["model_type"],
+#                         "category": result["category"],
+#                         "image": {
+#                             "filename": first_image["filename"],
+#                             "filepath": first_image["filepath"],
+#                             "image_base64": first_image["image_base64"]
+#                         },
+#                         "mask_path": result["mask_path"]
+#                     }
+#                 else:
+#                     final_data = result
                 
-                chunk3 = json.dumps(final_data) + "\n"
-                yield f"{len(chunk3):x}\r\n{chunk3}\r\n"
+#                 chunk3 = json.dumps(final_data) + "\n"
+#                 yield f"{len(chunk3):x}\r\n{chunk3}\r\n"
                 
-            except Exception as e:
-                error_chunk = json.dumps({"success": False, "error": str(e)}) + "\n"
-                yield f"{len(error_chunk):x}\r\n{error_chunk}\r\n"
+#             except Exception as e:
+#                 error_chunk = json.dumps({"success": False, "error": str(e)}) + "\n"
+#                 yield f"{len(error_chunk):x}\r\n{error_chunk}\r\n"
             
-            # End chunked encoding
-            yield "0\r\n\r\n"
+#             # End chunked encoding
+#             yield "0\r\n\r\n"
         
-        return Response(
-            chunked_response(),
-            headers={
-                'Transfer-Encoding': 'chunked',
-                'Connection': 'keep-alive',
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'no-cache'
-            }
-        )
+#         return Response(
+#             chunked_response(),
+#             headers={
+#                 'Transfer-Encoding': 'chunked',
+#                 'Connection': 'keep-alive',
+#                 'Content-Type': 'application/json',
+#                 'Access-Control-Allow-Origin': '*',
+#                 'Cache-Control': 'no-cache'
+#             }
+#         )
         
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
 
-# Test endpoint to verify server is working
-@app.route('/test_streaming', methods=['GET'])
-def test_streaming():
-    """Test streaming response"""
-    def generate_test():
-        for i in range(5):
-            yield f"data: {json.dumps({'count': i, 'message': f'Test message {i}'})}\n\n"
-            time.sleep(1)
-        yield f"data: {json.dumps({'status': 'completed'})}\n\n"
+# # Test endpoint to verify server is working
+# @app.route('/test_streaming', methods=['GET'])
+# def test_streaming():
+#     """Test streaming response"""
+#     def generate_test():
+#         for i in range(5):
+#             yield f"data: {json.dumps({'count': i, 'message': f'Test message {i}'})}\n\n"
+#             time.sleep(1)
+#         yield f"data: {json.dumps({'status': 'completed'})}\n\n"
     
-    return Response(
-        generate_test(),
-        mimetype='text/plain',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*'
-        }
-    )
+#     return Response(
+#         generate_test(),
+#         mimetype='text/plain',
+#         headers={
+#             'Cache-Control': 'no-cache',
+#             'Connection': 'keep-alive',
+#             'Access-Control-Allow-Origin': '*'
+#         }
+#     )
 
 @app.route('/generate_from_paths', methods=['POST'])
 def generate_from_paths():

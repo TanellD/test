@@ -85,7 +85,7 @@ class OOTDServer:
         filepath = f"./images_output/{filename}"
         image.save(filepath)
         return filepath
-    
+    # Also fix the process_ootd method in your OOTDServer class:
     def process_ootd(self, 
                     model_image, 
                     cloth_image, 
@@ -149,22 +149,26 @@ class OOTDServer:
             
             # Save generated images and prepare response
             result_images = []
-            filename = f"out_{model_type}_0.png"
-            filepath = self._save_image_with_name(image, filename)
-            
-            # Convert to base64 for API response
-            image_base64 = self._encode_image_to_base64(image)
-            result_images = {
-                "filename": filename,
-                "image_base64": image_base64
-            }
+            for idx, generated_image in enumerate(images):  # Fixed: use 'generated_image' instead of 'image'
+                filename = f"out_{model_type}_{idx}.png"
+                filepath = self._save_image_with_name(generated_image, filename)
+                
+                # Convert to base64 for API response
+                image_base64 = self._encode_image_to_base64(generated_image)
+                result_images.append({
+                    "index": idx,
+                    "filename": filename,
+                    "filepath": filepath,
+                    "image_base64": image_base64
+                })
             
             return {
                 "success": True,
                 "model_type": model_type,
                 "category": self.category_dict[category],
+                "num_generated": len(images),
                 "mask_path": mask_path,
-                "image": result_images
+                "images": result_images
             }
             
         except Exception as e:
@@ -175,6 +179,96 @@ class OOTDServer:
                 "error": str(e),
                 "traceback": traceback.format_exc()
             }
+
+    # def process_ootd(self, 
+    #                 model_image, 
+    #                 cloth_image, 
+    #                 model_type="dc", 
+    #                 category=0, 
+    #                 scale=2.0, 
+    #                 steps=20, 
+    #                 samples=1, 
+    #                 seed=-1):
+    #     """Process OOTD inference"""
+        
+    #     try:
+    #         # Validate inputs
+    #         if model_type == 'hd' and category != 0:
+    #             raise ValueError("model_type 'hd' requires category == 0 (upperbody)!")
+            
+    #         # Load OOTD model
+    #         model = self._load_ootd_model(model_type)
+            
+    #         # Resize images
+    #         cloth_img = cloth_image.resize((768, 1024))
+    #         model_img = model_image.resize((768, 1024))
+            
+    #         # Generate keypoints and parsing
+    #         print("🔍 Generating keypoints...")
+    #         keypoints = self.openpose_model(model_img.resize((384, 512)))
+            
+    #         print("🎭 Generating parsing mask...")
+    #         model_parse, *_ = self.parsing_model(model_img.resize((384, 512)))
+            
+    #         # Get mask
+    #         mask, mask_gray = get_mask_location(
+    #             model_type, 
+    #             self.category_dict_utils[category], 
+    #             model_parse, 
+    #             keypoints
+    #         )
+    #         mask = mask.resize((768, 1024), Image.NEAREST)
+    #         mask_gray = mask_gray.resize((768, 1024), Image.NEAREST)
+            
+    #         # Create masked image
+    #         masked_vton_img = Image.composite(mask_gray, model_img, mask)
+            
+    #         # Run OOTD inference
+    #         print("🎨 Running OOTD inference...")
+    #         images = model(
+    #             model_type=model_type,
+    #             category=self.category_dict[category],
+    #             image_garm=cloth_img,
+    #             image_vton=masked_vton_img,
+    #             mask=mask,
+    #             image_ori=model_img,
+    #             num_samples=samples,
+    #             num_steps=steps,
+    #             image_scale=scale,
+    #             seed=seed,
+    #         )
+            
+    #         # Save mask for debugging
+    #         mask_path = self._save_image_with_name(masked_vton_img, f"mask_{model_type}.jpg")
+            
+    #         # Save generated images and prepare response
+    #         result_images = []
+    #         filename = f"out_{model_type}_0.png"
+    #         filepath = self._save_image_with_name(image, filename)
+            
+    #         # Convert to base64 for API response
+    #         image_base64 = self._encode_image_to_base64(image)
+    #         result_images = {
+    #             "filename": filename,
+    #             "image_base64": image_base64
+    #         }
+            
+    #         return {
+    #             "success": True,
+    #             "model_type": model_type,
+    #             "category": self.category_dict[category],
+    #             "mask_path": mask_path,
+    #             "image": result_images
+    #         }
+            
+    #     except Exception as e:
+    #         print(f"❌ Error in OOTD processing: {str(e)}")
+    #         traceback.print_exc()
+    #         return {
+    #             "success": False,
+    #             "error": str(e),
+    #             "traceback": traceback.format_exc()
+    #         }
 
 # Initialize server
 ootd_server = OOTDServer()
@@ -190,7 +284,7 @@ def health_check():
 
 @app.route('/generate', methods=['POST'])
 def generate_ootd():
-    """Main OOTD generation endpoint"""
+    """Main OOTD generation endpoint - returns first image only"""
     try:
         data = request.get_json()
         
@@ -215,7 +309,7 @@ def generate_ootd():
         model_image = ootd_server._decode_base64_image(model_image_b64)
         cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
         
-        # Process OOTD
+        # Process OOTD - force samples=1 to get only first image
         result = ootd_server.process_ootd(
             model_image=model_image,
             cloth_image=cloth_image,
@@ -223,11 +317,26 @@ def generate_ootd():
             category=category,
             scale=scale,
             steps=steps,
-            samples=samples,
+            samples=1,  # Force only 1 sample
             seed=seed
         )
         
-        return jsonify(result)
+        # Return only the first image info
+        if result["success"] and result["images"]:
+            first_image = result["images"][0]
+            return jsonify({
+                "success": True,
+                "model_type": result["model_type"],
+                "category": result["category"],
+                "image": {
+                    "filename": first_image["filename"],
+                    "filepath": first_image["filepath"],
+                    "image_base64": first_image["image_base64"]
+                },
+                "mask_path": result["mask_path"]
+            })
+        else:
+            return jsonify(result)
         
     except Exception as e:
         return jsonify({
@@ -235,6 +344,7 @@ def generate_ootd():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
 
 @app.route('/generate_from_paths', methods=['POST'])
 def generate_from_paths():

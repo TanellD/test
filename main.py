@@ -282,124 +282,69 @@ def health_check():
         "gpu_id": ootd_server.gpu_id
     })
 
-# @app.route('/generate', methods=['POST'])
-# def generate_ootd():
-#     """Main OOTD generation endpoint - returns first image only"""
-#     try:
-#         data = request.get_json()
-        
-#         # Extract parameters
-#         model_image_b64 = data.get('model_image')  # base64 encoded
-#         cloth_image_b64 = data.get('cloth_image')  # base64 encoded
-#         model_type = data.get('model_type', 'dc')
-#         category = data.get('category', 0)
-#         scale = data.get('scale', 2.0)
-#         steps = data.get('steps', 20)
-#         samples = data.get('samples', 1)
-#         seed = data.get('seed', 42)
-        
-#         # Validate required inputs
-#         if not model_image_b64 or not cloth_image_b64:
-#             return jsonify({
-#                 "success": False,
-#                 "error": "model_image and cloth_image are required"
-#             }), 400
-        
-#         # Decode images
-#         model_image = ootd_server._decode_base64_image(model_image_b64)
-#         cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
-        
-#         # Process OOTD - force samples=1 to get only first image
-#         result = ootd_server.process_ootd(
-#             model_image=model_image,
-#             cloth_image=cloth_image,
-#             model_type=model_type,
-#             category=category,
-#             scale=scale,
-#             steps=steps,
-#             samples=1,  # Force only 1 sample
-#             seed=seed
-#         )
-        
-#         # Return only the first image info
-#         if result["success"] and result["images"]:
-#             first_image = result["images"][0]
-#             return jsonify({
-#                 "success": True,
-#                 "model_type": result["model_type"],
-#                 "category": result["category"],
-#                 "image": {
-#                     "filename": first_image["filename"],
-#                     "filepath": first_image["filepath"],
-#                     "image_base64": first_image["image_base64"]
-#                 },
-#                 "mask_path": result["mask_path"]
-#             })
-#         else:
-#             return jsonify(result)
-        
-#     except Exception as e:
-#         return jsonify({
-#             "success": False,
-#             "error": str(e),
-#             "traceback": traceback.format_exc()
-#         }), 500
-
 @app.route('/generate', methods=['POST'])
 def generate_ootd():
-"""Generate with keep-alive headers"""
+    """Main OOTD generation endpoint - returns first image only"""
     try:
         data = request.get_json()
         
-        # Validate inputs
-        model_image_b64 = data.get('model_image')
-        cloth_image_b64 = data.get('cloth_image')
+        # Extract parameters
+        model_image_b64 = data.get('model_image')  # base64 encoded
+        cloth_image_b64 = data.get('cloth_image')  # base64 encoded
+        model_type = data.get('model_type', 'dc')
+        category = data.get('category', 0)
+        scale = data.get('scale', 2.0)
+        steps = data.get('steps', 20)
+        samples = data.get('samples', 1)
+        seed = data.get('seed', 42)
         
+        # Validate required inputs
         if not model_image_b64 or not cloth_image_b64:
-            return jsonify({"success": False, "error": "Images required"}), 400
-        
-        # Send immediate response to prevent 503
-        print("🔄 Starting generation...")
+            return jsonify({
+                "success": False,
+                "error": "model_image and cloth_image are required"
+            }), 400
         
         # Decode images
         model_image = ootd_server._decode_base64_image(model_image_b64)
         cloth_image = ootd_server._decode_base64_image(cloth_image_b64)
         
-        # Process OOTD
+        # Process OOTD - force samples=1 to get only first image
         result = ootd_server.process_ootd(
             model_image=model_image,
             cloth_image=cloth_image,
-            model_type=data.get('model_type', 'dc'),
-            category=data.get('category', 0),
-            scale=data.get('scale', 2.0),
-            steps=data.get('steps', 20),
-            samples=1,
-            seed=data.get('seed', 42)
+            model_type=model_type,
+            category=category,
+            scale=scale,
+            steps=steps,
+            samples=1,  # Force only 1 sample
+            seed=seed
         )
         
-        if result["success"]:
+        # Return only the first image info
+        if result["success"] and result["images"]:
             first_image = result["images"][0]
-            response = jsonify({
+            return jsonify({
                 "success": True,
-                "image_base64": first_image["image_base64"],
-                "model_type": result["model_type"]
+                "model_type": result["model_type"],
+                "category": result["category"],
+                "image": {
+                    "filename": first_image["filename"],
+                    "filepath": first_image["filepath"],
+                    "image_base64": first_image["image_base64"]
+                },
+                "mask_path": result["mask_path"]
             })
         else:
-            response = jsonify(result)
-        
-        # Add headers to prevent timeout
-        response.headers['Connection'] = 'keep-alive'
-        response.headers['Keep-Alive'] = 'timeout=600, max=1000'
-        response.headers['Cache-Control'] = 'no-cache'
-        
-        return response
+            return jsonify(result)
         
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": str(e),
+            "traceback": traceback.format_exc()
         }), 500
+
 
 @app.route('/generate_from_paths', methods=['POST'])
 def generate_from_paths():
